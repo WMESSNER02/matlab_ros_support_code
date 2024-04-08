@@ -5,7 +5,18 @@ function save_img_structures_to_file
 % as img##.jpg.
 
     cur_dir = pwd;
-    last = strsplit(cur_dir,'/');
+    
+    % What OS are you using?
+    OS = computer;
+    
+    if contains (OS,'WIN')
+        last = strsplit(cur_dir,'\');
+    % Linux
+    else
+        last = strsplit(cur_dir,'/');
+    end
+
+    % Check for merge
     if ~strcmp( last(end),'merge')
         error('You are not in the ./yolo/data/merge folder. Please switch or call merge_img_structures from the /yolo/data folder first')
     end
