@@ -2,8 +2,7 @@ function myImgStruct = collect_obj_images(model_name)
 %--------------------------------------------------------------------------
 %myImgStruct = collect_obj_images() collects image data from gazebo objects in the simulation world. 
 %
-% The method expects an environment with a single object. The method
-% will identify the object's position while keep the robot arm's current height. 
+% The method will identify the object's position while keep the robot arm's current height. 
 % Then the robot arm will cycle about the object an 'iteration' number of
 % times, visiting rot_offset points around the circle, and restarting the
 % cycle at lin_offset distance away from the center at the next cycle.  
@@ -92,52 +91,71 @@ function myImgStruct = collect_obj_images(model_name)
     pause(1);
     
     %% Cycle around object
-    for i = 1:total_operations
-       
-        %% Read Image
-        myImg = rosReadImage(rgbImgSub.LatestMessage); 
-        fprintf('Recorded img %d of %d...\n',i,total_operations);
+    try
+        for i = 1:total_operations
+           
+            %% Read Image
+            rosImg      = receive(rgbImgSub);
+            myImg       = rosReadImage(rosImg);        
+            fprintf('Recorded img %d of %d...\n',i,total_operations);
+    
+            % Visualize 
+            if optns('debug')
+                imshow(myImg)
+            end
+        
+            % Save img before transformation to file
+            imageName = sprintf('img%d', i);
+            myImgStruct.(imageName) = myImg;
+            
+        
+            %% Transform offset
+            % Create offsets and insert noise for randomness
+            % Linear offset
+            lOff_k = ceil( i/rot_offset );             % Ie n=4: (1,2,3,4)=>1, (5,6,7,8)=>2
+                            
+            % Rotation offset        
+            rOff_k = mod( i,optns("rot_offset") );              % Ie n=4: (1,2,3,4), (1,2,3,4),...
+               
+            % Compute an offset arm from base that rotates with each iteration
+            d = (optns("lin_offset") + 0.05*rand )* lOff_k;     % Add to this offset some random difference of upto 5cm
+            d = [d,0,0,0]';
+            R = trotz(2*pi/rot_offset * rOff_k);
+            T = R*d;
+        
+            % Ajust matlab2ros coord frames
+            temp = T(2);
+            T(2) = T(1);
+            T(1) = -temp; 
+            new_R_T_M = mat_R_T_M; % Do not modify base pose, you will use it anew in each iteration
+            new_R_T_M(:,4) = new_R_T_M(:,4) + T;
+            
+            %% Move to new location around circle, will later take a picture
+            traj_result = moveTo(new_R_T_M,optns);    
+            fprintf('Cycle %d/%d...\n\n', i,total_operations);
+        end
+    catch
+        %% Save img to structure if there is an exception
 
-        % Visualize 
-        if optns('debug')
-            imshow(myImg)
+        % Create file name associated with model
+        outputFileName = set_inputObj_FileName(model_name(1:end-1));
+    
+        % Save in data folder
+        fullPath = fullfile('data', outputFileName); % Creates a full file path   
+        if ~exist('data', 'dir')                     % If the folder does not exist, create it 
+            mkdir('data');
         end
     
-        % Save img before transformation to file
-        imageName = sprintf('img%d', i);
-        myImgStruct.(imageName) = myImg;
-        
-    
-        %% Transform offset
-        % Create offsets and insert noise for randomness
-        % Linear offset
-        lOff_k = ceil( i/rot_offset );             % Ie n=4: (1,2,3,4)=>1, (5,6,7,8)=>2
-                        
-        % Rotation offset        
-        rOff_k = mod( i,optns("rot_offset") );              % Ie n=4: (1,2,3,4), (1,2,3,4),...
-           
-        % Compute an offset arm from base that rotates with each iteration
-        d = (optns("lin_offset") + 0.05*rand )* lOff_k;     % Add to this offset some random difference of upto 5cm
-        d = [d,0,0,0]';
-        R = trotz(2*pi/rot_offset * rOff_k);
-        T = R*d;
-    
-        % Ajust matlab2ros coord frames
-        temp = T(2);
-        T(2) = T(1);
-        T(1) = -temp; 
-        new_R_T_M = mat_R_T_M; % Do not modify base pose, you will use it anew in each iteration
-        new_R_T_M(:,4) = new_R_T_M(:,4) + T;
-        
-        %% Move to new location around circle, will later take a picture
-        traj_result = moveTo(new_R_T_M,optns);    
-        fprintf('Cycle %d/%d...\n\n', i,total_operations);
+        % Save struct to file
+        save(fullPath, 'myImgStruct')
+        fprintf('File saved as %s\n', outputFileName);
     end
     
     %% Save img to structure
     % Name images as img00 and save them to file with random class name
     imageName   = sprintf('img%d', i+1); 
-    myImg       = rosReadImage(rgbImgSub.LatestMessage);
+    rosImg      = receive(rgbImgSub);
+    myImg       = rosReadImage(rosImg);
     
     myImgStruct.(imageName) = myImg;
     

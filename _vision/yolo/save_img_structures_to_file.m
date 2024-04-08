@@ -1,9 +1,28 @@
 function save_img_structures_to_file
-% Assumes .mat image structures in ./ros_matlab/code/_vision/data
+% Assumes .mat image structures in ./ros_matlab/code/_vision/data/merge
 % Will extract images from each structure and save them to file. 
 % Uses the base name of file_name as folder_name and then inside saves them
 % as img##.jpg.
 
+    cur_dir = pwd;
+    
+    % What OS are you using?
+    OS = computer;
+    
+    if contains (OS,'WIN')
+        last = strsplit(cur_dir,'\');
+    % Linux
+    else
+        last = strsplit(cur_dir,'/');
+    end
+
+    % Check for merge
+    if ~strcmp( last(end),'merge')
+        error('You are not in the ./yolo/data/merge folder. Please switch or call merge_img_structures from the /yolo/data folder first')
+    end
+
+    % Only load .mat files (currently not handling older .mat files, may be
+    % redundant).
     files = dir('*.mat');
     
     % File length
@@ -19,10 +38,7 @@ function save_img_structures_to_file
         % Load structures inside cell. Still need to refer to them by internal field name: myImgStruct to access data
         loadedData{i} = load(filePath);
     end    
-
-    % Extract core part of file name using regexp (i.e. red_can_)
-    pattern = '^(.+?)_\d{4}_\d{4}\.mat$';
-    
+ 
     % Timestamp for folder
     formattedDateTimeStr = datetime('now', 'Format', 'yyyyMMdd_HHmmss');
 
@@ -45,7 +61,7 @@ function save_img_structures_to_file
         %% Save images
 
         str = loadedData{i};
-        field_names{i} = fieldnames(str.myImgStruct); % Hold cell array of field names        
+        field_names{i} = fieldnames(str.outStruct); % Hold cell array of field names        
 
         % Use field names to set outStruct to the equivalent images
         for j = 1:length(field_names{i})
@@ -54,7 +70,7 @@ function save_img_structures_to_file
             % Save the image to file
             entry = field_names{i}{j};
             fileName = append(entry,'.jpg');
-            imwrite(str.myImgStruct.(entry), fileName);
+            imwrite(str.outStruct.(entry), fileName);
 
             % Increase counter
             ctr = ctr + 1;

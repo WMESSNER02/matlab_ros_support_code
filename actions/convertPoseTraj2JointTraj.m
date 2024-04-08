@@ -56,7 +56,9 @@ function [mat_joint_traj,robot_joint_names] = convertPoseTraj2JointTraj(robot,ma
         
         % Check Joint Angle Integrity
         if max( abs(des_q) ) > 2*pi 
-            error('IK joints > 2*pi. Not possible. Consider restarting gazebo...')
+            disp('IK joints > 2*pi. Not possible. Will keep the same joint angles...')
+            mat_joint_traj(i,:) = mat_cur_q;
+            return 
         end
 
 

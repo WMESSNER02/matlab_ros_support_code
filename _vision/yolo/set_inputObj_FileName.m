@@ -2,8 +2,8 @@ function outputFileName = set_inputObj_FileName(inputString)
 
     % Mapping from input strings to output file names
     mapping = containers.Map(...
-        {'rCan', 'gCan', 'yCan', 'rBottle', 'bBottle', 'yBottle', 'pouch'}, ...
-        {'red_can', 'green_can', 'yellow_can', 'red_bottle', 'blue_bottle', 'yellow_bottle', 'pouch'});
+        {'rCan', 'gCan', 'yCan', 'rBottle', 'bBottle', 'yBottle', 'pouch','box','wcase'}, ...
+        {'red_can', 'green_can', 'yellow_can', 'red_bottle', 'blue_bottle', 'yellow_bottle', 'pouch','cardBoard_box','wooden_case'});
 
     % Check if the inputString is in the map
     if isKey(mapping, inputString)
